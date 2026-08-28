@@ -78,3 +78,100 @@ pub struct Setting {
     pub key: String,
     pub value: String,
 }
+
+// ---------- 学习任务模块（阶段 7） ----------
+
+/// AI 生成的一次学习计划（1-2 周小阶段）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StudyPlan {
+    pub id: i64,
+    pub title: String,
+    pub goal: Option<String>,
+    pub days: i64,
+    pub meta: Option<String>,
+    pub status: String, // active | archived
+    pub created_at: String,
+}
+
+/// 计划任务树节点：parent_id + sort_order 构成树，kind 分层 day → task → sub
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StudyPlanNode {
+    pub id: i64,
+    pub plan_id: i64,
+    pub parent_id: Option<i64>,
+    pub title: String,
+    pub kind: String, // day | task | sub
+    pub required: bool,
+    pub content: Option<String>,
+    pub exercise: Option<String>,
+    pub resource_url: Option<String>,
+    pub resource_label: Option<String>,
+    pub done: bool,
+    pub done_at: Option<String>,
+    pub sort_order: i64,
+    pub created_at: String,
+}
+
+/// 保存整棵树时的节点输入：tmp_id 用于前端引用，后端解析成真实 parent_id
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanNodeInput {
+    pub tmp_id: String,
+    pub parent_tmp_id: Option<String>, // None = 根（day 节点）
+    pub title: String,
+    pub kind: String,
+    pub required: bool,
+    pub content: Option<String>,
+    pub exercise: Option<String>,
+    pub resource_url: Option<String>,
+    pub resource_label: Option<String>,
+}
+
+/// 知识库分块
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KbChunk {
+    pub id: i64,
+    pub chapter: String,
+    pub title: Option<String>,
+    pub content: String,
+    pub ord: i64,
+}
+
+/// AI 助手会话消息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiMessage {
+    pub id: i64,
+    pub session_id: String,
+    pub role: String,
+    pub content: String,
+    pub created_at: String,
+}
+
+/// 检索命中结果（仅向前端返回）
+#[derive(Debug, Clone, Serialize)]
+pub struct KbHit {
+    pub chapter: String,
+    pub title: Option<String>,
+    pub content: String,
+    pub score: f64,
+}
+
+/// AI 出题结果
+#[derive(Debug, Clone, Serialize)]
+pub struct Quiz {
+    pub question: String,
+    pub model_answer: String,
+}
+
+/// 问答结果：答案 + 知识库来源（供前端展示）
+#[derive(Debug, Clone, Serialize)]
+pub struct AskResult {
+    pub answer: String,
+    pub sources: Vec<KbHit>,
+}
+
+/// 生成计划的返回：新计划 id 与节点总数
+#[derive(Debug, Clone, Serialize)]
+pub struct GenerateResult {
+    pub plan_id: i64,
+    pub node_count: usize,
+}

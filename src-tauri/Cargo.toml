@@ -26,4 +26,7 @@ rusqlite = { version = "0.40.2", features = ["bundled"] }
 tauri-plugin-notification = "2.3.3"
 chrono = "0.4.45"
 winreg = "0.52"
+# OpenAI 兼容网关直连（AI 设置 provider=openai 时使用）
+# native-tls（schannel）避开 rustls 默认的 aws-lc-rs C 构建
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "charset", "http2", "native-tls"] }
 

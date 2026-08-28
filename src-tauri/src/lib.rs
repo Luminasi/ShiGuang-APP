@@ -1,11 +1,16 @@
+mod ai;
+mod claude_cli;
 mod commands;
 mod db;
+mod knowledge;
 mod models;
 mod reminders;
 mod scanner;
 mod steam;
+mod study;
 mod timers;
 
+use claude_cli::AiState;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -18,12 +23,32 @@ pub fn run() {
             let db = db::init(app).expect("failed to initialize database");
             app.manage(db);
 
+            // 预置学习知识库（幂等：版本一致则跳过）
+            {
+                let conn = app.state::<db::DbState>().0.clone();
+                let lock = conn.lock().expect("db lock");
+                if let Err(e) = knowledge::seed_kb(&lock) {
+                    eprintln!("[study] seed_kb failed: {e}");
+                }
+            }
+
+            // AI 状态（忙标记 + 子进程句柄）
+            app.manage(AiState::new());
+
             // 到点提醒后台线程（今日计划）
             let db_conn = app.state::<db::DbState>().0.clone();
             reminders::start(app.handle().clone(), db_conn.clone());
             // 游戏计时检查线程（剩余 5 分钟提醒 + 到点自动记录）
             timers::start(app.handle().clone(), db_conn);
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // 应用退出时清理残留的 AI 子进程
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                if let Some(state) = window.app_handle().try_state::<AiState>() {
+                    state.kill_current();
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // 科目 / 学习任务
@@ -69,6 +94,26 @@ pub fn run() {
             commands::get_setting,
             commands::set_setting,
             commands::list_settings,
+            // AI 设置（阶段 7：OpenAI 兼容网关直连）
+            ai::get_ai_settings,
+            ai::set_ai_settings,
+            ai::test_ai_connection,
+            // 学习计划与任务树（阶段 7）
+            study::list_study_plans,
+            study::delete_plan,
+            study::list_plan_nodes,
+            study::save_plan_tree,
+            study::toggle_plan_node,
+            study::update_plan_node,
+            // 学习 AI 助手（阶段 7）
+            study::generate_study_plan,
+            study::ai_ask,
+            study::ai_quiz,
+            study::ai_list_history,
+            study::ai_clear_history,
+            // 知识库（阶段 7）
+            study::seed_kb,
+            study::kb_search,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

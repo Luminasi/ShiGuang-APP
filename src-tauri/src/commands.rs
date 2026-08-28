@@ -18,7 +18,7 @@ fn row_to_bool(v: i64) -> bool {
 // ---------- 通用执行器 ----------
 
 /// 在后台线程中锁定数据库连接并执行闭包
-async fn with_db<T, F>(state: State<'_, DbState>, f: F) -> Result<T, String>
+pub(crate) async fn with_db<T, F>(state: State<'_, DbState>, f: F) -> Result<T, String>
 where
     T: Send + 'static,
     F: FnOnce(&Connection) -> rusqlite::Result<T> + Send + 'static,

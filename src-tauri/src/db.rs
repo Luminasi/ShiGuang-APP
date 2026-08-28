@@ -135,6 +135,57 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
             key   TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+
+        -- 学习计划（AI 生成的一次 1-2 周小阶段计划）
+        CREATE TABLE IF NOT EXISTS study_plans (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            title      TEXT NOT NULL,
+            goal       TEXT,
+            days       INTEGER NOT NULL DEFAULT 7,
+            meta       TEXT,                           -- JSON：生成时用的用户画像快照
+            status     TEXT NOT NULL DEFAULT 'active', -- active | archived
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        );
+
+        -- 学习计划任务树节点：树结构 = parent_id + sort_order
+        -- kind 分层：day(根，每天一个) → task(任务) → sub(细分节点)
+        CREATE TABLE IF NOT EXISTS study_plan_nodes (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id        INTEGER NOT NULL REFERENCES study_plans(id) ON DELETE CASCADE,
+            parent_id      INTEGER REFERENCES study_plan_nodes(id) ON DELETE CASCADE,
+            title          TEXT NOT NULL,
+            kind           TEXT NOT NULL DEFAULT 'task',   -- day | task | sub
+            required       INTEGER NOT NULL DEFAULT 1,     -- 1 必学 / 0 选修（按就业水平）
+            content        TEXT,                           -- 内容讲解（markdown）
+            exercise       TEXT,                           -- 练习题
+            resource_url   TEXT,                           -- 推荐资料/视频链接
+            resource_label TEXT,                           -- 链接显示文案
+            done           INTEGER NOT NULL DEFAULT 0,
+            done_at        TEXT,
+            sort_order     INTEGER NOT NULL DEFAULT 0,
+            created_at     TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_nodes_plan ON study_plan_nodes(plan_id);
+
+        -- 知识库分块（本地轻量 RAG 检索）
+        CREATE TABLE IF NOT EXISTS kb_chunks (
+            id      INTEGER PRIMARY KEY AUTOINCREMENT,
+            chapter TEXT NOT NULL,                     -- 章节标识，如 agent-principles
+            title   TEXT,
+            content TEXT NOT NULL,
+            ord     INTEGER NOT NULL DEFAULT 0,        -- 章节内顺序
+            UNIQUE(chapter, ord)
+        );
+
+        -- AI 学习助手会话历史（session 默认 'main'）
+        CREATE TABLE IF NOT EXISTS ai_messages (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL DEFAULT 'main',
+            role       TEXT NOT NULL,                  -- user | assistant
+            content    TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_session ON ai_messages(session_id);
         "#,
     )?;
     // 旧数据库升级：补充后续版本新增的列
@@ -201,6 +252,31 @@ mod tests {
         // 插设置
         conn.execute("INSERT INTO settings (key, value) VALUES ('theme', 'default')", [])
             .unwrap();
+        // 插学习计划与节点（day → task 两层）
+        conn.execute("INSERT INTO study_plans (title, goal, days) VALUES ('测试计划', '目标', 7)", [])
+            .unwrap();
+        conn.execute(
+            "INSERT INTO study_plan_nodes (plan_id, parent_id, title, kind, required) VALUES (1, NULL, '第 1 天', 'day', 1)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO study_plan_nodes (plan_id, parent_id, title, kind, required) VALUES (1, 1, 'Agent 原理', 'task', 1)",
+            [],
+        )
+        .unwrap();
+        // 插知识库分块
+        conn.execute(
+            "INSERT INTO kb_chunks (chapter, title, content, ord) VALUES ('agent-principles', 'Agent 定义', '内容', 0)",
+            [],
+        )
+        .unwrap();
+        // 插 AI 会话
+        conn.execute(
+            "INSERT INTO ai_messages (session_id, role, content) VALUES ('main', 'user', '你好')",
+            [],
+        )
+        .unwrap();
 
         // 全部能查回来
         let n: i64 = conn
@@ -231,6 +307,29 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM settings", [], |r| r.get(0))
             .unwrap();
         assert_eq!(n, 1);
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM study_plans", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM study_plan_nodes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 2);
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM kb_chunks", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM ai_messages", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+
+        // 删除计划，级联删节点树
+        conn.execute("DELETE FROM study_plans WHERE id = 1", []).unwrap();
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM study_plan_nodes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 0);
 
         // 删除科目，级联删任务
         conn.execute("DELETE FROM subjects WHERE id = 1", []).unwrap();

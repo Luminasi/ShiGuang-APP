@@ -28,3 +28,6 @@ src-tauri/target
 
 # 开发用参考图（非应用资源）
 图例/
+
+# 本地调试临时数据库
+sqlite_mcp_server.db
