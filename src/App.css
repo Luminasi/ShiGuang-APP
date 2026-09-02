@@ -5251,15 +5251,13 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* 可点击的吉祥物（首页总览：形变连招 / 整活） */
-.overview-hero .mascot-svg,
-.overview-chat-head .mascot-svg {
+/* 可点击的吉祥物（首页总览：形变连招 / 整活）；对话开始后尺寸平滑收小 */
+.overview-hero .mascot-svg {
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, width 0.3s ease, height 0.3s ease;
 }
 
-.overview-hero .mascot-svg:hover,
-.overview-chat-head .mascot-svg:hover {
+.overview-hero .mascot-svg:hover {
   transform: scale(1.06);
 }
 
@@ -5274,6 +5272,11 @@ body {
   gap: 30px;
   padding: 40px 24px;
   overflow-y: auto;
+}
+
+/* 对话进行中：间距收紧，消息面板与输入框内联在同一个界面上 */
+.overview.chatting {
+  gap: 20px;
 }
 
 .overview-hero {
@@ -5374,9 +5377,9 @@ body {
 
 /* ---------- 首页总览 · 对话模式 ---------- */
 
+/* 内联消息面板：不整页切换，直接排在吉祥物与输入框之间 */
 .overview-chat {
   width: min(720px, 92vw);
-  max-height: calc(100vh - 130px);
   display: flex;
   flex-direction: column;
   background: var(--glass-strong);
@@ -5389,32 +5392,21 @@ body {
   animation: welcome-in 0.45s ease both;
 }
 
-.overview-chat-head {
+.overview-chat-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
+  justify-content: space-between;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--glass-border);
 }
 
 .overview-chat-title {
-  min-width: 0;
-}
-
-.overview-chat-title h2 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--fg-title);
-}
-
-.overview-chat-title p {
-  font-size: 12px;
+  font-size: 13px;
+  letter-spacing: 1px;
   color: var(--fg-muted);
-  margin-top: 2px;
 }
 
 .overview-new {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -5435,10 +5427,10 @@ body {
 }
 
 .overview-chat-list {
-  flex: 1;
-  min-height: 280px;
+  min-height: 160px;
+  max-height: 38vh;
   overflow-y: auto;
-  padding: 16px 18px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;

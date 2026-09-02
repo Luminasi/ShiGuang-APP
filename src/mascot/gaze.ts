@@ -42,9 +42,12 @@ export interface Aim {
  */
 export function lookTarget({ nx, ny, tour, pointer }: Aim): Look {
   return {
-    yaw: -TURN + nx * YAW_MAX,
+    // 拾光适配：主页吉祥物居中，视线左右对称跟随光标。
+    // 原版 yaw = -TURN + nx*YAW_MAX（吉祥物固定左下角，视线恒偏左朝向对话区），
+    // 居中布局下光标在右边也「转不过来」，故去掉 -TURN 偏移；俯仰同样对称居中。
+    yaw: nx * YAW_MAX,
     // 俯仰正 = 向上看，而屏幕 y 轴向下
-    pitch: PITCH - ny * PITCH_MAX,
+    pitch: -ny * PITCH_MAX,
     mix: tour,
     spin: SPIN * (1 - tour),
     wander: pointer ? 0 : 1

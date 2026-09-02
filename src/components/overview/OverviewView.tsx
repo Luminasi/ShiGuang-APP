@@ -195,25 +195,27 @@ export default function OverviewView() {
   const chatting = entries.length > 0;
 
   return (
-    <div className="overview">
-      {chatting ? (
-        /* ---- 对话模式：居中 720px 卡片 ---- */
+    <div className={`overview${chatting ? " chatting" : ""}`}>
+      <div className="overview-hero">
+        <Mascot
+          size={chatting ? 96 : 160}
+          follow
+          sceneColors
+          state={mascotState}
+          expression={expression}
+          shape={shape}
+          onClick={handleMascotClick}
+        />
+        {!chatting && <h1 className="welcome-title">今天想做些什么</h1>}
+        {!chatting && <p className="overview-sub">问我任何问题，或从下面开始</p>}
+      </div>
+
+      {/* 对话内联在页面里（不换界面）：消息面板直接排在吉祥物与输入框之间 */}
+      {chatting && (
         <div className="overview-chat">
-          <div className="overview-chat-head">
-            <Mascot
-              size={64}
-              follow
-              sceneColors
-              state={mascotState}
-              expression={expression}
-              shape={shape}
-              onClick={handleMascotClick}
-            />
-            <div className="overview-chat-title">
-              <h2>小拾</h2>
-              <p>AI 学习助手 · 也可以点我变个身</p>
-            </div>
-            <button className="overview-new" onClick={clear} title="新对话">
+          <div className="overview-chat-bar">
+            <span className="overview-chat-title">小拾 · AI 助手</span>
+            <button className="overview-new" onClick={clear} title="清空并重新开始">
               <Eraser size={14} /> 新对话
             </button>
           </div>
@@ -267,69 +269,37 @@ export default function OverviewView() {
               </div>
             )}
           </div>
-
-          <div className="ai-chat-input overview-chat-input">
-            <input
-              value={input}
-              placeholder="继续问小拾…"
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && send()}
-              disabled={asking}
-            />
-            <button
-              className="ai-chat-send"
-              onClick={() => send()}
-              disabled={asking || !input.trim()}
-            >
-              <Send size={15} />
-            </button>
-          </div>
         </div>
-      ) : (
-        /* ---- 欢迎布局：大吉祥物 + 标题 + 大输入框 + 示例 chips ---- */
-        <>
-          <div className="overview-hero">
-            <Mascot
-              size={160}
-              follow
-              sceneColors
-              state={mascotState}
-              expression={expression}
-              shape={shape}
-              onClick={handleMascotClick}
-            />
-            <h1 className="welcome-title">今天想做些什么</h1>
-            <p className="overview-sub">问我任何问题，或从下面开始</p>
-          </div>
-
-          <div className="overview-composer">
-            <div className="overview-composer-box">
-              <input
-                value={input}
-                placeholder="问问今天的计划、学习建议、面试题…"
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                disabled={asking}
-              />
-              <button
-                className="ai-chat-send overview-send"
-                onClick={() => send()}
-                disabled={asking || !input.trim()}
-                title="发送"
-              >
-                <Send size={18} />
-              </button>
-            </div>
-            <div className="overview-chips">
-              {CHIPS.map((c) => (
-                <button key={c} onClick={() => send(c)} disabled={asking}>
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
       )}
+
+      <div className="overview-composer">
+        <div className="overview-composer-box">
+          <input
+            value={input}
+            placeholder={chatting ? "继续问小拾…" : "问问今天的计划、学习建议、面试题…"}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            disabled={asking}
+          />
+          <button
+            className="ai-chat-send overview-send"
+            onClick={() => send()}
+            disabled={asking || !input.trim()}
+            title="发送"
+          >
+            <Send size={18} />
+          </button>
+        </div>
+        {!chatting && (
+          <div className="overview-chips">
+            {CHIPS.map((c) => (
+              <button key={c} onClick={() => send(c)} disabled={asking}>
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
