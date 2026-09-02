@@ -49,8 +49,6 @@ export const MODULES: AppModule[] = [
   },
 ];
 
-export const WELCOME_VIEW = "welcome";
-
 /** 顶部状态栏三个占位入口（功能在后续版本开放） */
 export const STATUS_ITEMS = [
   { id: "user", name: "用户", icon: "user" },

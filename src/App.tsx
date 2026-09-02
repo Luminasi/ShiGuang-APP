@@ -6,10 +6,11 @@ import PlaceholderView from "./components/PlaceholderView";
 import PlanView from "./components/PlanView";
 import GameView from "./components/GameView";
 import StudyView from "./components/study/StudyView";
+import OverviewView from "./components/overview/OverviewView";
 import HelpView from "./components/help/HelpView";
 import SettingsView from "./components/settings/SettingsView";
 import SceneBackground, { loadScene, SceneId } from "./components/SceneBackground";
-import { MODULES, WELCOME_VIEW } from "./modules";
+import { MODULES } from "./modules";
 import "./App.css";
 
 // 首帧前就写入场景标记，避免非雨林场景闪一下默认配色
@@ -17,7 +18,8 @@ const initialScene = loadScene();
 document.documentElement.dataset.scene = initialScene;
 
 export default function App() {
-  const [view, setView] = useState<string>(WELCOME_VIEW);
+  // 阶段 8：启动直接进首页总览（欢迎页保留为未知视图兜底，不再作启动页）
+  const [view, setView] = useState<string>("overview");
   const [scene, setScene] = useState<SceneId>(initialScene);
   const [placeholder, setPlaceholder] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -34,6 +36,8 @@ export default function App() {
   // 已开发模块的视图；未开发的显示占位页
   const renderModule = (id: string) => {
     switch (id) {
+      case "overview":
+        return <OverviewView />;
       case "plan":
         return <PlanView />;
       case "game":
@@ -65,11 +69,7 @@ export default function App() {
       <NavBar active={view} onSelect={setView} />
 
       <main className="main-area">
-        {view === WELCOME_VIEW || !currentModule ? (
-          <Welcome />
-        ) : (
-          renderModule(view)
-        )}
+        {!currentModule ? <Welcome /> : renderModule(view)}
       </main>
 
       {placeholder && (

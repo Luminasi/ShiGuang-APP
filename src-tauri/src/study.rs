@@ -493,24 +493,29 @@ pub async fn generate_study_plan(
 }
 
 /// 问答：RAG 检索 → 拼历史 → 调 Claude → 落库会话
+/// session_id：会话隔离（首页总览用 "overview-home"，学习任务用默认 "main"），可选
 #[tauri::command]
 pub async fn ai_ask(
     state: State<'_, DbState>,
     ai_state: State<'_, AiState>,
     question: String,
+    session_id: Option<String>,
 ) -> Result<AskResult, String> {
     let db = state.0.clone();
     let ai = AiState(ai_state.0.clone());
+    let session = session_id.unwrap_or_else(|| "main".to_string());
+    let session_read = session.clone();
+    let question_read = question.clone();
 
     // 短锁：检索 + 读最近历史 + 读 AI 提供方配置
-    let (hits, history, ai_cfg) = with_conn(&db, |conn| {
-        let hits = search_kb(conn, &question, 5)
+    let (hits, history, ai_cfg) = with_conn(&db, move |conn| {
+        let hits = search_kb(conn, &question_read, 5)
             .map_err(|e| rusqlite::Error::InvalidParameterName(e))?;
         let mut stmt = conn.prepare(
-            "SELECT role, content FROM ai_messages WHERE session_id = 'main' ORDER BY id DESC LIMIT 10",
+            "SELECT role, content FROM ai_messages WHERE session_id = ?1 ORDER BY id DESC LIMIT 10",
         )?;
         let rows = stmt
-            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+            .query_map([&session_read], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         let ai_cfg = load_ai_config(conn)?;
         Ok((hits, rows, ai_cfg))
@@ -539,16 +544,17 @@ pub async fn ai_ask(
             .await
             .map_err(|e| format!("AI 调用失败：{e}"))??;
 
-    // 落库会话
+    // 落库会话（按传入的 session_id 隔离）
     let answer_saved = answer.clone();
+    let session_save = session.clone();
     with_conn(&db, move |conn| {
         conn.execute(
-            "INSERT INTO ai_messages (session_id, role, content) VALUES ('main', 'user', ?1)",
-            [question.clone()],
+            "INSERT INTO ai_messages (session_id, role, content) VALUES (?1, 'user', ?2)",
+            rusqlite::params![session_save, question.clone()],
         )?;
         conn.execute(
-            "INSERT INTO ai_messages (session_id, role, content) VALUES ('main', 'assistant', ?1)",
-            [answer_saved],
+            "INSERT INTO ai_messages (session_id, role, content) VALUES (?1, 'assistant', ?2)",
+            rusqlite::params![session_save, answer_saved],
         )?;
         Ok(())
     })?;

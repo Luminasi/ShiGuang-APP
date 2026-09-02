@@ -353,9 +353,9 @@ export interface GenerateResult {
 /** 生成学习计划（AI 调用，耗时 10-60s） */
 export const generateStudyPlan = (profile: string) =>
   invoke<GenerateResult>("generate_study_plan", { profile });
-/** AI 问答（含知识库检索） */
-export const aiAsk = (question: string) =>
-  invoke<AskResult>("ai_ask", { question });
+/** AI 问答（含知识库检索）；sessionId 缺省 "main"，首页总览传 "overview-home" 隔离历史 */
+export const aiAsk = (question: string, sessionId?: string) =>
+  invoke<AskResult>("ai_ask", { question, sessionId: sessionId ?? null });
 /** 基于节点内容出面试题 */
 export const aiQuiz = (nodeId: number) =>
   invoke<Quiz>("ai_quiz", { nodeId });

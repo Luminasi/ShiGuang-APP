@@ -5230,3 +5230,223 @@ body {
     rgba(22, 12, 4, 0.38) 100%
   );
 }
+
+/* ============================================================
+   吉祥物与首页总览（阶段 8）
+   新增 DOM：.overview*（首页总览）、.mascot-svg（bloub 引擎渲染层）。
+   ============================================================ */
+
+/* ---------- 吉祥物通用 ---------- */
+
+.mascot-svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* AI 悬浮球胶囊换玻璃底（原 #fff 硬编码会让雪日白吉祥物隐形） */
+.ai-bubble {
+  background: var(--glass-strong);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* 可点击的吉祥物（首页总览：形变连招 / 整活） */
+.overview-hero .mascot-svg,
+.overview-chat-head .mascot-svg {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.overview-hero .mascot-svg:hover,
+.overview-chat-head .mascot-svg:hover {
+  transform: scale(1.06);
+}
+
+/* ---------- 首页总览 · 欢迎布局 ---------- */
+
+.overview {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  padding: 40px 24px;
+  overflow-y: auto;
+}
+
+.overview-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: welcome-in 1s ease both;
+}
+
+.overview-hero .welcome-title {
+  font-size: 40px; /* 有吉祥物在头上，标题略小于欢迎页 */
+}
+
+.overview-sub {
+  font-size: 14.5px;
+  letter-spacing: 2px;
+  color: var(--fg-muted);
+}
+
+/* 大圆角输入框 + 示例 chips */
+.overview-composer {
+  width: min(720px, 88vw);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: welcome-in 1s ease 0.15s both;
+}
+
+.overview-composer-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 22px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 26px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.overview-composer-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.overview-composer-box input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font-size: 15px;
+  font-family: inherit;
+  padding: 10px 0;
+}
+
+.overview-composer-box input::placeholder {
+  color: var(--fg-faint);
+}
+
+.overview-send {
+  width: 44px;
+  height: 44px;
+}
+
+.overview-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.overview-chips button {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--glass-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.overview-chips button:hover {
+  background: var(--hover);
+  color: var(--fg);
+  border-color: var(--glass-border-strong);
+}
+
+.overview-chips button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- 首页总览 · 对话模式 ---------- */
+
+.overview-chat {
+  width: min(720px, 92vw);
+  max-height: calc(100vh - 130px);
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  overflow: hidden;
+  animation: welcome-in 0.45s ease both;
+}
+
+.overview-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.overview-chat-title {
+  min-width: 0;
+}
+
+.overview-chat-title h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg-title);
+}
+
+.overview-chat-title p {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+}
+
+.overview-new {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--glass-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.overview-new:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.overview-chat-list {
+  flex: 1;
+  min-height: 280px;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 学习任务加载球容器改为吉祥物后：内容居中 */
+.study-ball {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

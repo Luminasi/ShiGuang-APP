@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import type { GenerateResult } from "../../lib/api";
 import { generateStudyPlan } from "../../lib/api";
+import type { Block } from "../../mascot";
+import Mascot from "../mascot/Mascot";
 
 const STEPS = [
   "正在分析你的学习进度…",
   "正在规划一周的学习阶段…",
   "正在整理必学与选修内容…",
   "正在准备练习与学习资料…",
+];
+
+// 阶段 8：加载球替换为吉祥物「思考联想」蒙太奇（每块时长 ≥ MIN_BLOCK 0.6s）
+const THINK_CYCLE: Block[] = [
+  { state: "thinking", duration: 1.6 },
+  { state: "wink", duration: 0.8 },
+  { state: "hexagon", duration: 1.2 },
+  { state: "idle", duration: 1.2 },
 ];
 
 /**
@@ -79,10 +89,7 @@ export default function PlanGenerating({
   return (
     <div className="study-planning">
       <div className="study-ball" aria-hidden>
-        <div className="study-ball-top" />
-        <div className="study-ball-line" />
-        <div className="study-ball-bottom" />
-        <div className="study-ball-button" />
+        <Mascot size={84} cycle={THINK_CYCLE} follow={false} sceneColors />
       </div>
       <h2 className="study-planning-title">为你安排学习计划</h2>
       <p className="study-planning-step" key={step}>
