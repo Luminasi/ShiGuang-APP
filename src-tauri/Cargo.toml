@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+# src/bin/ 下另有 ccswitch 工具二进制，`cargo run` 默认跑主应用
+default-run = "shiguang"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

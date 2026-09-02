@@ -31,3 +31,9 @@ src-tauri/target
 
 # 本地调试临时数据库
 sqlite_mcp_server.db
+
+# 临时脚本目录
+.tmp/
+
+# 像素角色参考图（非应用资源）
+不知火舞/

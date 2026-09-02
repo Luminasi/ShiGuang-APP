@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Check, KeyRound, PlugZap, Save, Terminal, X } from "lucide-react";
 import { getAiSettings, setAiSettings, testAiConnection } from "../../lib/api";
 
+type Msg = { kind: "ok" | "err"; text: string } | null;
+
 /**
  * AI 设置：全屏弹层。
- * 选择 AI 提供方（本机 Claude Code CLI / OpenAI 兼容网关 API key），
- * 配置 base_url / api_key / model，可测试连接后保存（存本机 settings 表）。
+ * 学习助手的 AI 提供方（本机 Claude Code CLI / OpenAI 兼容网关）。
  */
 export default function SettingsView({ onClose }: { onClose: () => void }) {
   const [provider, setProvider] = useState<"cli" | "openai">("cli");
@@ -15,7 +16,7 @@ export default function SettingsView({ onClose }: { onClose: () => void }) {
   const [hasKey, setHasKey] = useState(false);
   const [keyTail, setKeyTail] = useState("");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [msg, setMsg] = useState<Msg>(null);
 
   // 挂载回显已保存配置
   useEffect(() => {

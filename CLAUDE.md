@@ -16,6 +16,10 @@ cd src-tauri && cargo test   # 运行 Rust 单测（db / reminders / steam / sca
 
 注意：浏览器直接打开 `index.html` 无效——所有数据操作走 Tauri `invoke`，必须通过 `npm run tauri dev` 运行。
 
+## 提交约定
+
+每完成一个新功能：提交到本地 git 并推送远程 GitHub（`origin/main`，仓库 ShiGuang-APP）。提交信息格式 `拾光 vX.Y.Z：主题`（中文，尾行 Co-Authored-By: Claude Code）。
+
 ## 架构约定
 
 1. **前后端边界**：前端不写 SQL。所有数据操作统一走 [src/lib/api.ts](src/lib/api.ts) 的 `invoke` 封装 → 后端 `#[tauri::command]`（注册见 [src-tauri/src/lib.rs](src-tauri/src/lib.rs)）。新增数据功能 = 后端命令 + `api.ts` 封装两步，命令注册在 `lib.rs` 的 `generate_handler!` 中。
@@ -41,12 +45,13 @@ cd src-tauri && cargo test   # 运行 Rust 单测（db / reminders / steam / sca
 
 - 注释、UI 文案、提交信息一律中文；提交信息格式如「拾光 v0.1.0：骨架、数据层、今日计划、游戏娱乐」
 - 图标统一用 `lucide-react`
-- 色板是 [App.css:5-23](src/App.css#L5-L23) 顶部 CSS 变量（注释注明后续主题系统会改写，改色先改这里）
+- 色板是 [App.css](src/App.css) 顶部 token 变量块（三场景 `:root[data-scene="rain|snow|cloud"]`，改色先改这里）；旧硬编码色由文件末尾「主题覆写层」覆盖，新样式也写在那里
 - 视图文件体量较大（PlanView 302 行、GameView 746 行），新视图沿用同风格的组件内自组织，不强行拆分
 
-## 当前进度速查（2026-08，v0.1.0）
+## 当前进度速查（2026-09）
 
-- **已实现**：数据层、今日计划、游戏娱乐（含开机动画、Steam/本机程序扫描导入、持久化计时器、历史统计）
-- **后端/数据就绪、缺 UI**：学习任务（study）、散步（walk）、设置（settings 表与命令已存在）
-- **未开始**：首页总览（overview）、主题系统、数据备份导出
+- **已实现**：数据层、今日计划、游戏娱乐（含开机动画、Steam/本机程序扫描导入、持久化计时器、历史统计、像素跑酷）、学习任务（AI 助手/任务树/出题）、AI 设置（提供方配置）、三场景主题系统（雨林/雪日/暖云 + 状态栏切换器 + 雨雪雾粒子背景）
+- **后端/数据就绪、缺 UI**：散步（walk，`walk_records` 表与命令已存在）
+- **未开始**：首页总览（overview）、数据备份导出
+- 主题系统（阶段 6）：`<html data-scene>` 驱动 CSS 变量；场景持久化于 `localStorage.shiguang_scene`；切换器在状态栏，背景三层渲染在 [SceneBackground.tsx](src/components/SceneBackground.tsx)（远景虚化层 + 主图 contain + 粒子画布；窗玻璃特效/光池挂在主图层内随图视差）。三场景共用 [public/scenes/cabin-dusk.jpg](public/scenes/cabin-dusk.jpg)，全部天气参数（滤镜/粒子/视差/光池）集中在组件顶部 `SCENE_CFG`，替换素材只改 `image` 与构图坐标
 - 后端单测覆盖 db / reminders / steam / scanner / timers；前端无测试框架

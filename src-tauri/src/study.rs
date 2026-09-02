@@ -588,12 +588,14 @@ pub async fn ai_quiz(
         "你是拾光的面试官。基于下面的学习内容，出一道 AI Agent / vibe coding 方向的面试题，\
          难度与就业水平匹配，考察概念理解或场景应用。\n\n\
          知识点：{}\n内容：{}\n\n\
+         要求简洁：题目 50 字内，参考答案 150 字内。\n\
          只输出一个 JSON 对象，不要围栏，不要额外文字：\
-         {{\"question\": \"题目（含场景描述）\", \"answer\": \"参考答案 150-300 字\"}}",
+         {{\"question\": \"题目（含场景描述）\", \"answer\": \"参考答案 150 字内\"}}",
         node.title, content
     );
 
-    let raw = tauri::async_runtime::spawn_blocking(move || run_ai_blocking(&ai, &ai_cfg, &prompt, 60, None))
+    // max_tokens=700：限制输出长度，避免模型长篇大论拖慢出题
+    let raw = tauri::async_runtime::spawn_blocking(move || run_ai_blocking(&ai, &ai_cfg, &prompt, 60, Some(700)))
         .await
         .map_err(|e| format!("AI 调用失败：{e}"))??;
 

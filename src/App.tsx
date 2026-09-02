@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import StatusBar from "./components/StatusBar";
 import NavBar from "./components/NavBar";
 import Welcome from "./components/Welcome";
@@ -8,14 +8,26 @@ import GameView from "./components/GameView";
 import StudyView from "./components/study/StudyView";
 import HelpView from "./components/help/HelpView";
 import SettingsView from "./components/settings/SettingsView";
+import SceneBackground, { loadScene, SceneId } from "./components/SceneBackground";
 import { MODULES, WELCOME_VIEW } from "./modules";
 import "./App.css";
 
+// 首帧前就写入场景标记，避免非雨林场景闪一下默认配色
+const initialScene = loadScene();
+document.documentElement.dataset.scene = initialScene;
+
 export default function App() {
   const [view, setView] = useState<string>(WELCOME_VIEW);
+  const [scene, setScene] = useState<SceneId>(initialScene);
   const [placeholder, setPlaceholder] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // 场景切换（阶段 6）：写入 <html data-scene> 驱动 CSS 变量换色，并本地持久化
+  useEffect(() => {
+    document.documentElement.dataset.scene = scene;
+    localStorage.setItem("shiguang_scene", scene);
+  }, [scene]);
 
   const currentModule = MODULES.find((m) => m.id === view);
 
@@ -35,7 +47,14 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* 氛围背景层：场景渐变 + 雨/雪/雾粒子 */}
+      <div className="scene-bg">
+        <SceneBackground scene={scene} />
+      </div>
+
       <StatusBar
+        scene={scene}
+        onSceneChange={setScene}
         onPlaceholderClick={(name) => {
           if (name === "设置") setSettingsOpen(true);
           else if (name === "使用说明") setHelpOpen(true);

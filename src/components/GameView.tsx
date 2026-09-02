@@ -41,6 +41,7 @@ import {
 } from "../lib/api";
 import { posterFor } from "../lib/posters";
 import BootIntro from "./BootIntro";
+import PixelRunGame from "./game/PixelRunGame";
 
 /** 卡片封面色板（无海报时按名称取色） */
 const COVER_COLORS = [
@@ -145,6 +146,9 @@ export default function GameView() {
   // 设置启动路径弹层
   const [pathOpen, setPathOpen] = useState(false);
   const [pathInput, setPathInput] = useState("");
+
+  // 子视图切换：游戏库舞台 | 像素跑酷小游戏
+  const [miniGame, setMiniGame] = useState<"library" | "pixel-run">("library");
 
   // 计时显示每秒刷新（剩余时间由 started_at 实时算）
   const [tick, setTick] = useState(0);
@@ -361,6 +365,11 @@ export default function GameView() {
   const scanList = scanTab === "steam" ? steamList : progList;
   const selectedCount = checked.size;
 
+  // 像素跑酷：整块替换舞台（intro 是首次进入模块的全屏遮罩，此时必然已结束）
+  if (miniGame === "pixel-run") {
+    return <PixelRunGame onBack={() => setMiniGame("library")} />;
+  }
+
   return (
     <div className="game-view">
       {intro && <BootIntro onDone={finishIntro} />}
@@ -432,6 +441,13 @@ export default function GameView() {
             ))}
           <button className="plan-nav-btn" onClick={() => void openScan("steam")}>
             <Plus size={14} /> 添加游戏
+          </button>
+          <button
+            className="plan-nav-btn"
+            onClick={() => setMiniGame("pixel-run")}
+            title="像素跑酷小游戏（不知火舞）"
+          >
+            <Gamepad2 size={14} /> 像素跑酷
           </button>
         </div>
       </div>

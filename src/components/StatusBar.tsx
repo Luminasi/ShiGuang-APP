@@ -1,7 +1,25 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { HelpCircle, Minus, Settings, Square, User, X } from "lucide-react";
+import {
+  CloudRain,
+  CloudSun,
+  HelpCircle,
+  Minus,
+  Settings,
+  Snowflake,
+  Square,
+  User,
+  X,
+} from "lucide-react";
 import { STATUS_ITEMS } from "../modules";
+import type { SceneId } from "./SceneBackground";
+
+/** 三场景（阶段 6）：雨林 / 雪日 / 暖云 */
+const SCENES = [
+  { id: "rain", name: "雨林", Icon: CloudRain },
+  { id: "snow", name: "雪日", Icon: Snowflake },
+  { id: "cloud", name: "暖云", Icon: CloudSun },
+] as const;
 
 /** 北京时间格式化：2026年8月26日 星期三 20:34 */
 function formatBeijingTime(date: Date): string {
@@ -34,9 +52,17 @@ const ICONS: Record<string, typeof User> = {
 interface StatusBarProps {
   /** 点击占位入口（用户/设置/使用说明）时回调 */
   onPlaceholderClick: (name: string) => void;
+  /** 当前场景 */
+  scene: SceneId;
+  /** 切换场景 */
+  onSceneChange: (scene: SceneId) => void;
 }
 
-export default function StatusBar({ onPlaceholderClick }: StatusBarProps) {
+export default function StatusBar({
+  onPlaceholderClick,
+  scene,
+  onSceneChange,
+}: StatusBarProps) {
   const [now, setNow] = useState(new Date());
   const [maximized, setMaximized] = useState(false);
 
@@ -69,6 +95,20 @@ export default function StatusBar({ onPlaceholderClick }: StatusBarProps) {
             </button>
           );
         })}
+
+        {/* 场景切换器：雨林 / 雪日 / 暖云（阶段 6） */}
+        <div className="scene-switcher">
+          {SCENES.map(({ id, name, Icon }) => (
+            <button
+              key={id}
+              className={`scene-btn${scene === id ? " on" : ""}`}
+              title={`场景：${name}`}
+              onClick={() => onSceneChange(id)}
+            >
+              <Icon size={14} strokeWidth={2} />
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="status-clock" data-tauri-drag-region>
