@@ -247,7 +247,7 @@ export default function PlanView() {
             >
               <div className="plan-item-head">
                 <span className="plan-item-time">
-                  {fmtMin(p.start_min)}–{fmtMin(p.start_min + p.duration_min)}
+                  {fmtMin(p.start_min)}-{fmtMin(p.start_min + p.duration_min)}
                   <em className="plan-item-dur">（{p.duration_min} 分钟）</em>
                 </span>
                 <span className="plan-item-actions">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Eraser, Loader2, Send } from "lucide-react";
+import { BookOpen, Eraser, Send } from "lucide-react";
 import type { AiMessage, AskResult, KbHit } from "../../lib/api";
 import { aiAsk, aiClearHistory, aiListHistory } from "../../lib/api";
 import type { ExpressionId, ShapeId, StateId } from "../../mascot";
@@ -264,7 +264,12 @@ export default function OverviewView() {
             {asking && (
               <div className="ai-msg assistant">
                 <div className="ai-msg-bubble ai-msg-thinking">
-                  <Loader2 className="spin" size={13} /> 小拾正在思考…
+                  <span className="think-dots">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  小拾正在思考…
                 </div>
               </div>
             )}

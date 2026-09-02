@@ -56,6 +56,9 @@
   --radius: 12px;
   --radius-lg: 16px;
 
+  /* 交互动效缓动：流体贝塞尔，悬停/按压统一用它（taste 打磨） */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
   color-scheme: dark;
 }
 
@@ -125,6 +128,23 @@ button {
   background: none;
   cursor: pointer;
   color: inherit;
+}
+
+/* 键盘导航焦点环：全站可点元素统一主色描边，键盘用户可见（taste 打磨） */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* 无障碍：系统开启「减弱动态」时关闭全部 CSS 动画与过渡（吉祥物/粒子另有 JS 门控） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ============================================================
@@ -5261,6 +5281,10 @@ body {
   transform: scale(1.06);
 }
 
+.overview-hero .mascot-svg:active {
+  transform: scale(0.95);
+}
+
 /* ---------- 首页总览 · 欢迎布局 ---------- */
 
 .overview {
@@ -5274,9 +5298,11 @@ body {
   overflow-y: auto;
 }
 
-/* 对话进行中：间距收紧，消息面板与输入框内联在同一个界面上 */
+/* 对话进行中：间距收紧，消息面板与输入框内联在同一个界面上；
+   flex-start 防止内容超高时居中布局把顶部裁掉（居中 + overflow 的经典 bug） */
 .overview.chatting {
   gap: 20px;
+  justify-content: flex-start;
 }
 
 .overview-hero {
@@ -5284,11 +5310,12 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 20px;
-  animation: welcome-in 1s ease both;
+  animation: welcome-in 1s var(--ease-out) both;
 }
 
 .overview-hero .welcome-title {
   font-size: 40px; /* 有吉祥物在头上，标题略小于欢迎页 */
+  line-height: 1.15; /* 展示型标题收紧行高 */
 }
 
 .overview-sub {
@@ -5303,7 +5330,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  animation: welcome-in 1s ease 0.15s both;
+  animation: welcome-in 1s var(--ease-out) 0.15s both;
 }
 
 .overview-composer-box {
@@ -5316,7 +5343,11 @@ body {
   border-radius: 26px;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+
+.overview-composer-box:hover {
+  border-color: var(--glass-border-strong);
 }
 
 .overview-composer-box:focus-within {
@@ -5337,12 +5368,18 @@ body {
 }
 
 .overview-composer-box input::placeholder {
-  color: var(--fg-faint);
+  color: var(--fg-muted);
+  opacity: 0.85; /* 半透明次级色对比度比 --fg-faint 更足 */
 }
 
 .overview-send {
   width: 44px;
   height: 44px;
+  transition: transform 0.15s var(--ease-out);
+}
+
+.overview-send:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .overview-chips {
@@ -5361,13 +5398,18 @@ body {
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    border-color 0.15s var(--ease-out), transform 0.15s var(--ease-out);
 }
 
 .overview-chips button:hover {
   background: var(--hover);
   color: var(--fg);
   border-color: var(--glass-border-strong);
+}
+
+.overview-chips button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
 }
 
 .overview-chips button:disabled {
@@ -5389,7 +5431,7 @@ body {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   overflow: hidden;
-  animation: welcome-in 0.45s ease both;
+  animation: welcome-in 0.45s var(--ease-out) both;
 }
 
 .overview-chat-bar {
@@ -5418,12 +5460,17 @@ body {
   font-size: 12.5px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    transform 0.15s var(--ease-out);
 }
 
 .overview-new:hover {
   background: var(--hover);
   color: var(--fg);
+}
+
+.overview-new:active {
+  transform: scale(0.96);
 }
 
 .overview-chat-list {
@@ -5434,6 +5481,42 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* 思考气泡：三颗呼吸圆点替代转圈图标，节奏更贴近吉祥物气质 */
+.think-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.think-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: think-bounce 1.2s ease-in-out infinite;
+}
+
+.think-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.think-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes think-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
 }
 
 /* 学习任务加载球容器改为吉祥物后：内容居中 */
