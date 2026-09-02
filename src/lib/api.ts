@@ -369,3 +369,22 @@ export const aiClearHistory = (sessionId?: string) =>
 export const seedKb = () => invoke<number>("seed_kb");
 export const kbSearch = (query: string, limit?: number) =>
   invoke<KbHit[]>("kb_search", { query, limit: limit ?? 5 });
+
+// ---------- 首页总览对话总结与历史（阶段 8） ----------
+
+/** 一段归档的历史对话（退出应用时自动总结保存） */
+export interface OverviewSession {
+  id: number;
+  summary: string;
+  created_at: string;
+}
+
+/** AI 总结一段对话（退出归档用，后端超时上限 30s） */
+export const summarizeChat = (conversation: string) =>
+  invoke<string>("summarize_chat", { conversation });
+export const saveOverviewSummary = (summary: string) =>
+  invoke<OverviewSession>("save_overview_summary", { summary });
+export const listOverviewSessions = () =>
+  invoke<OverviewSession[]>("list_overview_sessions");
+export const deleteOverviewSummary = (id: number) =>
+  invoke<void>("delete_overview_summary", { id });

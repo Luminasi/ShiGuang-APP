@@ -32,7 +32,7 @@ cd src-tauri && cargo test   # 运行 Rust 单测（db / reminders / steam / sca
 ## 数据层
 
 - SQLite（rusqlite bundled，WAL 模式），数据库路径 `%APPDATA%\com.shiguang.app\shiguang.db`
-- 8 张表：`subjects`、`study_tasks`、`plan_items`、`games`、`game_sessions`、`game_timers`、`walk_records`、`settings`（建表见 [db.rs:53-147](src-tauri/src/db.rs#L53-L147)）
+- 13 张表：`subjects`、`study_tasks`、`plan_items`、`games`、`game_sessions`、`game_timers`、`walk_records`、`settings`、`study_plans`、`study_plan_nodes`、`kb_chunks`、`ai_messages`、`overview_sessions`（建表见 [db.rs](src-tauri/src/db.rs) 的 migrate）
 - 轻量迁移模式：`ensure_column`（[db.rs:33-50](src-tauri/src/db.rs#L33-L50)）——加列用它而非重建表
 - 模型对照：[models.rs](src-tauri/src/models.rs)（Rust struct）↔ [api.ts](src/lib/api.ts)（TS interface），字段一一对应
 
@@ -50,9 +50,10 @@ cd src-tauri && cargo test   # 运行 Rust 单测（db / reminders / steam / sca
 
 ## 当前进度速查（2026-09）
 
-- **已实现**：数据层、今日计划、游戏娱乐（含开机动画、Steam/本机程序扫描导入、持久化计时器、历史统计、像素跑酷）、学习任务（AI 助手/任务树/出题）、AI 设置（提供方配置）、三场景主题系统（雨林/雪日/暖云 + 状态栏切换器 + 雨雪雾粒子背景）、首页总览（bloub 吉祥物 + AI 对话）
+- **已实现**：数据层、今日计划、游戏娱乐（含开机动画、Steam/本机程序扫描导入、持久化计时器、历史统计、像素跑酷）、学习任务（AI 助手/任务树/出题）、AI 设置（提供方配置）、三场景主题系统（雨林/雪日/暖云 + 状态栏切换器 + 雨雪雾粒子背景）、首页总览（bloub 吉祥物 + AI 对话 + 对话历史自动归档）
 - **后端/数据就绪、缺 UI**：散步（walk，`walk_records` 表与命令已存在）
 - **未开始**：数据备份导出
 - 主题系统（阶段 6）：`<html data-scene>` 驱动 CSS 变量；场景持久化于 `localStorage.shiguang_scene`；切换器在状态栏，背景三层渲染在 [SceneBackground.tsx](src/components/SceneBackground.tsx)（远景虚化层 + 主图 contain + 粒子画布；窗玻璃特效/光池挂在主图层内随图视差）。三场景共用 [public/scenes/cabin-dusk.jpg](public/scenes/cabin-dusk.jpg)，全部天气参数（滤镜/粒子/视差/光池）集中在组件顶部 `SCENE_CFG`，替换素材只改 `image` 与构图坐标
 - 吉祥物与首页总览（阶段 8）：bloub 开源引擎（github.com/jeremy-prt/bloub，MIT）原样移植至 [src/mascot/](src/mascot/)（逐帧测量数值禁止改动，见文件头注释）；场景配色 rain=绿 / snow=白 / cloud=黄 由 [Mascot.tsx](src/components/mascot/Mascot.tsx) 的 `SCENE_COLOR` 映射（snow 用新增 'blanc'，paper 色随 `--bg`）；首页总览 [OverviewView.tsx](src/components/overview/OverviewView.tsx) 含 AI 对话（复用 `ai_ask`，会话隔离 "overview-home"）；学习模块两处精灵球已替换为吉祥物（AiBubble / PlanGenerating）
+- 对话生命周期（阶段 8.1）：聊天面板与输入框合成一块半透明玻璃板；每次启动都是全新欢迎页；退出应用时前端拦截 `onCloseRequested` → `overview::summarize_chat` AI 总结（10s 超时，失败退朴素摘要）→ 归档 `overview_sessions` → 清空会话再 `destroy()`；异常退出遗留消息在下次启动补归档
 - 后端单测覆盖 db / reminders / steam / scanner / timers；前端无测试框架

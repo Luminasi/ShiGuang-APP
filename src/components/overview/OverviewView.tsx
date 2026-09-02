@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Eraser, Send } from "lucide-react";
-import type { AiMessage, AskResult, KbHit } from "../../lib/api";
-import { aiAsk, aiClearHistory, aiListHistory } from "../../lib/api";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { BookOpen, Eraser, History, Send, Trash2, X } from "lucide-react";
+import type { AiMessage, AskResult, KbHit, OverviewSession } from "../../lib/api";
+import {
+  aiAsk,
+  aiClearHistory,
+  aiListHistory,
+  deleteOverviewSummary,
+  listOverviewSessions,
+  saveOverviewSummary,
+  summarizeChat,
+} from "../../lib/api";
+import { addDays, dateLabel, todayStr } from "../../lib/time";
 import type { ExpressionId, ShapeId, StateId } from "../../mascot";
 import { EXPRESSIONS, SHAPES } from "../../mascot";
 import Mascot from "../mascot/Mascot";
@@ -11,6 +21,10 @@ import Mascot from "../mascot/Mascot";
  * 中央大吉祥物（随场景换色）+「今天想做些什么」+ AI 对话。
  * 问答复用 ai_ask 链路，会话隔离用 session_id = "overview-home"
  * （与学习任务的 'main' 历史互不干扰）。
+ *
+ * 会话生命周期：每次启动都是全新欢迎页（不恢复上次对话）；退出应用时
+ * 把本次对话 AI 总结后归档到「历史对话」（overview_sessions 表）并清空会话；
+ * 异常退出遗留的消息在下次启动时补归档，欢迎页同样不被打扰。
  *
  * 吉祥物互动（「活泼可爱」的核心）：
  * - 眼睛跟随鼠标（Mascot follow 自带）；
@@ -36,6 +50,15 @@ export default function OverviewView() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // 退出归档时读取最新对话（close 事件回调闭包拿不到最新 state）
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
+
+  // ---- 历史对话 ----
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<OverviewSession[]>([]);
+  const [historyOpenId, setHistoryOpenId] = useState<number | null>(null);
+
   // ---- 吉祥物状态 ----
   const [mascotState, setMascotState] = useState<StateId>("idle");
   const [expression, setExpression] = useState<ExpressionId>("neutre");
@@ -44,24 +67,54 @@ export default function OverviewView() {
   const askingRef = useRef(false);
   const timeoutsRef = useRef<number[]>([]);
 
-  // 启动：加载本页会话历史
+  // 启动：每次都是全新欢迎页（不恢复上次对话）。
+  // 上次异常退出（未走退出归档流程）可能遗留会话消息：总结归档 → 清空，欢迎页不被打扰。
   useEffect(() => {
     let cancelled = false;
     aiListHistory(SESSION)
-      .then((msgs: AiMessage[]) => {
-        if (cancelled) return;
-        setEntries(
-          msgs.map((m) => ({
-            id: m.id,
-            role: m.role === "user" ? "user" : "assistant",
-            content: m.content,
-            createdAt: m.created_at,
-          })),
-        );
+      .then(async (msgs: AiMessage[]) => {
+        if (cancelled || msgs.length === 0) return;
+        const conv = msgs
+          .map((m) => `${m.role === "user" ? "用户" : "小拾"}：${m.content}`)
+          .join("\n");
+        let summary = await summarizeWithTimeout(conv, 10_000);
+        if (!summary) summary = naiveSummary(conv);
+        if (!cancelled) await saveOverviewSummary(summary).catch(() => undefined);
+        await aiClearHistory(SESSION).catch(() => undefined);
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 退出应用：AI 总结本次对话 → 归档历史对话 → 清空会话，再真正关闭窗口。
+  // 总结最多等 10s（失败/超时退回朴素摘要），归档不阻塞退出。
+  useEffect(() => {
+    const win = getCurrentWindow();
+    let closing = false;
+    const un = win.onCloseRequested(async (event) => {
+      if (closing) return;
+      event.preventDefault();
+      closing = true;
+      try {
+        const msgs = entriesRef.current;
+        if (msgs.length > 0) {
+          const conv = convText(msgs);
+          let summary = await summarizeWithTimeout(conv, 10_000);
+          if (!summary) summary = naiveSummary(conv);
+          await saveOverviewSummary(summary).catch(() => undefined);
+        }
+        await aiClearHistory(SESSION).catch(() => undefined);
+      } catch {
+        // 归档失败不阻塞退出
+      } finally {
+        win.destroy();
+      }
+    });
+    return () => {
+      un.then((f) => f());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -165,6 +218,20 @@ export default function OverviewView() {
     setMascotState("idle");
   };
 
+  // ---- 历史对话 ----
+  const openHistory = () => {
+    setShowHistory(true);
+    setHistoryOpenId(null);
+    listOverviewSessions()
+      .then(setHistory)
+      .catch(() => setHistory([]));
+  };
+
+  const removeHistory = async (id: number) => {
+    await deleteOverviewSummary(id).catch(() => undefined);
+    setHistory((prev) => prev.filter((h) => h.id !== id));
+  };
+
   // ---- 点击吉祥物：形变连招 / 整活 ----
   const handleMascotClick = () => {
     if (askingRef.current || reducedMotion) return;
@@ -194,8 +261,33 @@ export default function OverviewView() {
 
   const chatting = entries.length > 0;
 
+  // 输入框（欢迎态独立使用 / 对话态内嵌在聊天面板底部）
+  const composerBox = (
+    <div className="overview-composer-box">
+      <input
+        value={input}
+        placeholder={chatting ? "继续问小拾…" : "问问今天的计划、学习建议、面试题…"}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && send()}
+        disabled={asking}
+      />
+      <button
+        className="ai-chat-send overview-send"
+        onClick={() => send()}
+        disabled={asking || !input.trim()}
+        title="发送"
+      >
+        <Send size={18} />
+      </button>
+    </div>
+  );
+
   return (
     <div className={`overview${chatting ? " chatting" : ""}`}>
+      <button className="overview-history-btn" onClick={openHistory} title="历史对话">
+        <History size={14} /> 历史对话
+      </button>
+
       <div className="overview-hero">
         <Mascot
           size={chatting ? 96 : 160}
@@ -210,8 +302,8 @@ export default function OverviewView() {
         {!chatting && <p className="overview-sub">问我任何问题，或从下面开始</p>}
       </div>
 
-      {/* 对话内联在页面里（不换界面）：消息面板直接排在吉祥物与输入框之间 */}
-      {chatting && (
+      {/* 对话进行时：消息列表与输入框合成一块半透明玻璃板（内联在页面里，不换界面） */}
+      {chatting ? (
         <div className="overview-chat">
           <div className="overview-chat-bar">
             <span className="overview-chat-title">小拾 · AI 助手</span>
@@ -274,28 +366,12 @@ export default function OverviewView() {
               </div>
             )}
           </div>
-        </div>
-      )}
 
-      <div className="overview-composer">
-        <div className="overview-composer-box">
-          <input
-            value={input}
-            placeholder={chatting ? "继续问小拾…" : "问问今天的计划、学习建议、面试题…"}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            disabled={asking}
-          />
-          <button
-            className="ai-chat-send overview-send"
-            onClick={() => send()}
-            disabled={asking || !input.trim()}
-            title="发送"
-          >
-            <Send size={18} />
-          </button>
+          <div className="overview-composer in-panel">{composerBox}</div>
         </div>
-        {!chatting && (
+      ) : (
+        <div className="overview-composer">
+          {composerBox}
           <div className="overview-chips">
             {CHIPS.map((c) => (
               <button key={c} onClick={() => send(c)} disabled={asking}>
@@ -303,8 +379,64 @@ export default function OverviewView() {
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* 历史对话浮层：每次退出自动归档的对话摘要 */}
+      {showHistory && (
+        <div
+          className="overview-history"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowHistory(false);
+          }}
+        >
+          <div className="overview-history-card">
+            <div className="overview-history-head">
+              <span className="overview-chat-title">历史对话</span>
+              <button
+                className="overview-history-close"
+                onClick={() => setShowHistory(false)}
+                title="关闭"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="overview-history-list">
+              {history.length === 0 && (
+                <p className="overview-history-empty">
+                  还没有历史对话。每次退出应用时，小拾会把本次对话自动总结归档到这里。
+                </p>
+              )}
+              {history.map((h) => (
+                <div key={h.id} className={`oh-item${historyOpenId === h.id ? " open" : ""}`}>
+                  <div
+                    className="oh-item-head"
+                    onClick={() => setHistoryOpenId(historyOpenId === h.id ? null : h.id)}
+                  >
+                    <span className="oh-item-time">{histLabel(h.created_at)}</span>
+                    <button
+                      className="oh-item-del"
+                      title="删除这条历史"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void removeHistory(h.id);
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                  <div
+                    className="oh-item-summary"
+                    onClick={() => setHistoryOpenId(historyOpenId === h.id ? null : h.id)}
+                  >
+                    {h.summary}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -327,4 +459,45 @@ function timeOf(createdAt?: string) {
   const d = new Date(createdAt);
   if (Number.isNaN(d.getTime())) return "";
   return d.toTimeString().slice(0, 5);
+}
+
+/** 对话 → 纯文本（AI 总结用） */
+function convText(entries: ChatEntry[]): string {
+  return entries
+    .map((e) => `${e.role === "user" ? "用户" : "小拾"}：${e.content}`)
+    .join("\n");
+}
+
+/** AI 总结对话，最多等 ms 毫秒；失败或超时返回 null（由调用方走朴素摘要兜底） */
+async function summarizeWithTimeout(conv: string, ms: number): Promise<string | null> {
+  try {
+    return await Promise.race([
+      summarizeChat(conv),
+      new Promise<null>((resolve) => window.setTimeout(() => resolve(null), ms)),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+/** AI 总结不可用时的朴素兜底：首条提问 + 提问次数 */
+function naiveSummary(conv: string): string {
+  const first =
+    conv
+      .split("\n")
+      .find((l) => l.startsWith("用户："))
+      ?.slice(3)
+      .trim() ?? "";
+  const asks = (conv.match(/用户：/g) ?? []).length;
+  const head = first.length > 80 ? `${first.slice(0, 80)}…` : first;
+  return `（未生成 AI 摘要）本次共 ${asks} 次提问，主题：${head || "闲聊"}`;
+}
+
+/** 历史条目时间标签：今天/昨天 时分，更早显示月日 时分 */
+function histLabel(createdAt: string): string {
+  const date = createdAt.slice(0, 10);
+  const time = createdAt.slice(11, 16);
+  if (date === todayStr()) return `今天 ${time}`;
+  if (date === addDays(todayStr(), -1)) return `昨天 ${time}`;
+  return `${dateLabel(date).replace(/ 星期\S+/, "")} ${time}`;
 }

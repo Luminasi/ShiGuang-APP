@@ -4,6 +4,7 @@ mod commands;
 mod db;
 mod knowledge;
 mod models;
+mod overview;
 mod reminders;
 mod scanner;
 mod steam;
@@ -114,6 +115,11 @@ pub fn run() {
             // 知识库（阶段 7）
             study::seed_kb,
             study::kb_search,
+            // 首页总览对话总结与历史（阶段 8）
+            overview::summarize_chat,
+            overview::save_overview_summary,
+            overview::list_overview_sessions,
+            overview::delete_overview_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

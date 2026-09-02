@@ -175,3 +175,13 @@ pub struct GenerateResult {
     pub plan_id: i64,
     pub node_count: usize,
 }
+
+// ---------- 首页总览（阶段 8） ----------
+
+/// 一段归档的历史对话（退出应用时自动总结保存）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OverviewSession {
+    pub id: i64,
+    pub summary: String,
+    pub created_at: String,
+}

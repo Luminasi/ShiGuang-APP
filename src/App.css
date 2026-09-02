@@ -5288,6 +5288,7 @@ body {
 /* ---------- 首页总览 · 欢迎布局 ---------- */
 
 .overview {
+  position: relative; /* 历史对话按钮/浮层的定位基准 */
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -5419,12 +5420,12 @@ body {
 
 /* ---------- 首页总览 · 对话模式 ---------- */
 
-/* 内联消息面板：不整页切换，直接排在吉祥物与输入框之间 */
+/* 对话面板：半透明玻璃（透出场景背景），消息列表与输入框合成一块 */
 .overview-chat {
   width: min(720px, 92vw);
   display: flex;
   flex-direction: column;
-  background: var(--glass-strong);
+  background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-3);
@@ -5524,4 +5525,219 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---------- 首页总览 · 对话面板与输入框一体化 ---------- */
+
+/* 输入框内嵌在对话面板底部（聊天时与消息列表合成一块半透明玻璃板） */
+.overview-composer.in-panel {
+  width: 100%;
+  gap: 0;
+  border-top: 1px solid var(--glass-border);
+  padding: 6px 12px 6px 18px;
+  animation: none;
+}
+
+.overview-composer.in-panel .overview-composer-box {
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 4px 8px 4px 4px;
+}
+
+.overview-composer.in-panel .overview-composer-box:hover {
+  border-color: transparent;
+}
+
+/* 聚焦时整行微光，替代原胶囊的聚焦描边 */
+.overview-composer.in-panel:focus-within {
+  background: var(--hover);
+}
+
+/* 键盘导航：输入框自身的焦点环（键盘用户可见） */
+.overview-composer-box input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- 首页总览 · 历史对话 ---------- */
+
+/* 右上角历史入口（欢迎态与对话态常驻） */
+.overview-history-btn {
+  position: absolute;
+  top: 16px;
+  right: 22px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--glass-soft);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    border-color 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+}
+
+.overview-history-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+  border-color: var(--glass-border-strong);
+}
+
+.overview-history-btn:active {
+  transform: scale(0.96);
+}
+
+/* 历史对话浮层：遮罩 + 居中卡片 */
+.overview-history {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.overview-history-card {
+  width: min(600px, 92vw);
+  max-height: 74vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  overflow: hidden;
+  animation: welcome-in 0.35s var(--ease-out) both;
+}
+
+.overview-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.overview-history-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    transform 0.15s var(--ease-out);
+}
+
+.overview-history-close:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+
+.overview-history-close:active {
+  transform: scale(0.92);
+}
+
+.overview-history-list {
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.overview-history-empty {
+  margin: 26px 10px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--fg-muted);
+}
+
+.oh-item {
+  background: var(--glass-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: border-color 0.15s var(--ease-out);
+}
+
+.oh-item:hover {
+  border-color: var(--glass-border-strong);
+}
+
+.oh-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.oh-item-time {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--fg-muted);
+}
+
+.oh-item-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  color: var(--fg-faint);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out),
+    opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
+}
+
+.oh-item-del:hover {
+  background: var(--hover);
+  color: var(--fg);
+  opacity: 1;
+}
+
+.oh-item-del:active {
+  transform: scale(0.9);
+}
+
+.oh-item-summary {
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--fg);
+  white-space: pre-wrap;
+  word-break: break-word;
+  cursor: pointer;
+  /* 默认收起两行，点击展开全文 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.oh-item.open .oh-item-summary {
+  display: block;
+  -webkit-line-clamp: unset;
 }

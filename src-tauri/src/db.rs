@@ -186,6 +186,13 @@ fn migrate(conn: &Connection) -> rusqlite::Result<()> {
             created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
         );
         CREATE INDEX IF NOT EXISTS idx_ai_session ON ai_messages(session_id);
+
+        -- 首页总览对话历史（阶段 8）：退出应用时自动总结上下文归档于此
+        CREATE TABLE IF NOT EXISTS overview_sessions (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            summary    TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        );
         "#,
     )?;
     // 旧数据库升级：补充后续版本新增的列
@@ -277,6 +284,12 @@ mod tests {
             [],
         )
         .unwrap();
+        // 插首页对话历史（退出自动归档）
+        conn.execute(
+            "INSERT INTO overview_sessions (summary) VALUES ('今天聊了学习计划')",
+            [],
+        )
+        .unwrap();
 
         // 全部能查回来
         let n: i64 = conn
@@ -321,6 +334,10 @@ mod tests {
         assert_eq!(n, 1);
         let n: i64 = conn
             .query_row("SELECT COUNT(*) FROM ai_messages", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 1);
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM overview_sessions", [], |r| r.get(0))
             .unwrap();
         assert_eq!(n, 1);
 
